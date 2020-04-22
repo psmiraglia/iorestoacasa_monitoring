@@ -28,3 +28,17 @@ ho bisogno di queste informazioni:
 7. fare commit e push del repository `iorestoacasa_monitoring`
 8. creare un utente grafana con solo username, no email e no invio email, permesso "Viewer", e mandare alla persona in privato il link di invito
 9. chiedere a @tapion di fare il deploy sul server del repository `iorestoacasa_monitoring` e `iorestoacasa.work`
+
+## Eseguire localmente l'ambiente
+
+1.  Creare il file `hosts.json`
+
+        $ touch hosts.json
+
+2.  Eseguire il compose file
+
+        $ docker-compose up
+
+In alternativa
+
+    $ make up
