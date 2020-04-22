@@ -1,6 +1,11 @@
 import urllib.request
 import json
 import time
+import os
+
+HOSTS_FILE = "/hosts.json"
+SLEEP_TIME = int(os.getenv('SLEEP_TIME', '5'))
+
 
 def load_prometheus_query(query):
     req = urllib.request.Request(url=query)
@@ -12,8 +17,7 @@ def clean_trailing_slash(url):
         return url[:-1]
     return url
 
-while True:
-    time.sleep(5)
+def scrape_it():
     instances = {}
     credits = {
         'INSTITUTION': set(),
@@ -124,5 +128,11 @@ while True:
         'credits': new_credits,
     }
 
-    with open('/hosts.json', 'w') as f:
+    with open(HOSTS_FILE, 'w') as f:
         f.write(json.dumps(result, indent=2))
+
+
+if __name__ == '__main__':
+    while True:
+        scrape_it()
+        time.sleep(SLEEP_TIME)
