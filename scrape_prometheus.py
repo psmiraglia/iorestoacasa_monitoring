@@ -2,9 +2,20 @@ import urllib.request
 import json
 import time
 import os
+import logging
 
 HOSTS_FILE = "/hosts.json"
 SLEEP_TIME = int(os.getenv('SLEEP_TIME', '5'))
+
+
+LOG = logging.getLogger('scraper')
+LOG.setLevel(logging.DEBUG)
+
+fmt = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname).4s] %(message)s')
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(fmt)
+LOG.addHandler(ch)
 
 
 def load_prometheus_query(query):
@@ -135,4 +146,5 @@ def scrape_it():
 if __name__ == '__main__':
     while True:
         scrape_it()
+        LOG.info('Next scraping in %s seconds' % SLEEP_TIME)
         time.sleep(SLEEP_TIME)
