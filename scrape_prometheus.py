@@ -23,6 +23,7 @@ LOG.addHandler(ch)
 
 
 def load_prometheus_query(query):
+    LOG.info("Querying %s" % query)
     req = urllib.request.Request(url=query)
     with urllib.request.urlopen(req) as f:
         return json.loads(f.read().decode('utf-8'))
@@ -35,6 +36,37 @@ def clean_trailing_slash(url):
 def prometheus_query_url(query):
     return ("%s://%s:%s/api/v1/query?query=%s"
             % (PROMETHEUS_SCHEME, PROMETHEUS_HOST, PROMETHEUS_PORT, query))
+
+def parse_jitsi_participant(server):
+    d = {}
+    d['name'] = clean_trailing_slash(server['metric']['jitsi_url'].replace('https://', ''))
+    d['user_count'] = int(server['value'][1])
+    d['by'] = server['metric']['jitsi_hosted_by']
+    d['by_url'] = clean_trailing_slash(server['metric']['jitsi_hosted_by_url'])
+    d['url'] = clean_trailing_slash(server['metric']['jitsi_url'])
+    d['by_kind'] = server['metric']['jitsi_hosted_by_kind']
+    d['software'] = server['metric']['software']
+    d['available_bandwidth_mbps'] = server['metric']['available_bandwidth_mbps']
+    d['core_count'] = server['metric']['core_count']
+    return d
+
+def parse_mm_data(server, is_static=True):
+    d = {}
+    d['url'] = clean_trailing_slash(server['metric']['url'])
+    d['by'] = server['metric']['hosted_by']
+    d['by_url'] = clean_trailing_slash(server['metric']['hosted_by_url'])
+    d['by_kind'] = server['metric']['hosted_by_kind']
+    d['software'] = server['metric']['software']
+    d['available_bandwidth_mbps'] = server['metric']['available_bandwidth_mbps']
+    d['core_count'] = server['metric']['core_count']
+
+    if not is_static:
+        d['cpu_usage'] = round(float(server['value'][1]), ndigits=2)
+        d['name'] = clean_trailing_slash(server['metric']['url'].replace('https://', ''))
+    else:
+        d['name'] = clean_trailing_slash(server['metric']['jitsi_url'].replace('https://', ''))
+
+    return d
 
 def scrape_it():
     instances = {}
@@ -77,16 +109,7 @@ def scrape_it():
         if not all(key in server['metric'] for key in jitsi_required_labels):
             continue
         if server['metric']['software'] == 'JITSI':
-            d = {}
-            d['name'] = clean_trailing_slash(server['metric']['jitsi_url'].replace('https://', ''))
-            d['user_count'] = int(server['value'][1])
-            d['by'] = server['metric']['jitsi_hosted_by']
-            d['by_url'] = clean_trailing_slash(server['metric']['jitsi_hosted_by_url'])
-            d['url'] = clean_trailing_slash(server['metric']['jitsi_url'])
-            d['by_kind'] = server['metric']['jitsi_hosted_by_kind']
-            d['software'] = server['metric']['software']
-            d['available_bandwidth_mbps'] = server['metric']['available_bandwidth_mbps']
-            d['core_count'] = server['metric']['core_count']
+            d = parse_jitsi_participant(server)
             credits[d['by_kind']].add((d['by'], d['by_url']))
             instances[d['name']] = d
  
@@ -101,15 +124,7 @@ def scrape_it():
         if not all(key in server['metric'] for key in mm_required_labels):
             continue
         if server['metric'].get('software') == 'MM' and server['value'][1] == '1':
-            d = {}
-            d['name'] = clean_trailing_slash(server['metric']['jitsi_url'].replace('https://', ''))
-            d['url'] = clean_trailing_slash(server['metric']['url'])
-            d['by'] = server['metric']['hosted_by']
-            d['by_url'] = clean_trailing_slash(server['metric']['hosted_by_url'])
-            d['by_kind'] = server['metric']['hosted_by_kind']
-            d['software'] = server['metric']['software']
-            d['available_bandwidth_mbps'] = server['metric']['available_bandwidth_mbps']
-            d['core_count'] = server['metric']['core_count']
+            d = parse_mm_data(server)
             credits[d['by_kind']].add((d['by'], d['by_url']))
             instances[d['name']] = d
 
@@ -117,16 +132,7 @@ def scrape_it():
         if not all(key in server['metric'] for key in mm_required_labels):
             continue
         if server['metric'].get('software') == 'MM':
-            d = {}
-            d['name'] = clean_trailing_slash(server['metric']['url'].replace('https://', ''))
-            d['url'] = clean_trailing_slash(server['metric']['url'])
-            d['by'] = server['metric']['hosted_by']
-            d['by_url'] = clean_trailing_slash(server['metric']['hosted_by_url'])
-            d['by_kind'] = server['metric']['hosted_by_kind']
-            d['software'] = server['metric']['software']
-            d['available_bandwidth_mbps'] = server['metric']['available_bandwidth_mbps']
-            d['core_count'] = server['metric']['core_count']
-            d['cpu_usage'] = round(float(server['value'][1]), ndigits=2)
+            d = parse_mm_data(server, False)
             credits[d['by_kind']].add((d['by'], d['by_url']))
             instances[d['name']] = d
 
