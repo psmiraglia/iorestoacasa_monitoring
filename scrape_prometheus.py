@@ -7,6 +7,10 @@ import logging
 HOSTS_FILE = "/hosts.json"
 SLEEP_TIME = int(os.getenv('SLEEP_TIME', '5'))
 
+PROMETHEUS_SCHEME = os.getenv('PROMETHEUS_SCHEME', 'http')
+PROMETHEUS_HOST = os.getenv('PROMETHEUS_HOST', 'prometheus')
+PROMETHEUS_PORT = int(os.getenv('PROMETHEUS_PORT', '9090'))
+
 
 LOG = logging.getLogger('scraper')
 LOG.setLevel(logging.DEBUG)
@@ -27,6 +31,10 @@ def clean_trailing_slash(url):
     if url[-1] == '/':
         return url[:-1]
     return url
+
+def prometheus_query_url(query):
+    return ("%s://%s:%s/api/v1/query?query=%s"
+            % (PROMETHEUS_SCHEME, PROMETHEUS_HOST, PROMETHEUS_PORT, query))
 
 def scrape_it():
     instances = {}
@@ -59,11 +67,11 @@ def scrape_it():
         'software',
     ]
 
-    participants_data = load_prometheus_query('http://prometheus:9090/api/v1/query?query=jitsi_participants')
-    cpu_data = load_prometheus_query('http://prometheus:9090/api/v1/query?query=jitsi_cpu_usage')
-    static_mm_data = load_prometheus_query('http://prometheus:9090/api/v1/query?query=probe_success{software="MM"}')
-    mm_data = load_prometheus_query('http://prometheus:9090/api/v1/query?query=edumeet_cpu_usage')
-    mm_peers_data = load_prometheus_query('http://prometheus:9090/api/v1/query?query=edumeet_peers')
+    participants_data = load_prometheus_query(prometheus_query_url('jitsi_participants'))
+    cpu_data = load_prometheus_query(prometheus_query_url('jitsi_cpu_usage'))
+    static_mm_data = load_prometheus_query(prometheus_query_url('probe_success{software="MM"}'))
+    mm_data = load_prometheus_query(prometheus_query_url('edumeet_cpu_usage'))
+    mm_peers_data = load_prometheus_query(prometheus_query_url('edumeet_peers'))
 
     for server in participants_data['data']['result']:
         if not all(key in server['metric'] for key in jitsi_required_labels):
